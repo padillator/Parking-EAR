@@ -1,0 +1,207 @@
+[
+    {
+        "id": "9b286a97e54b6f1b",
+        "type": "tab",
+        "label": "Flow 5",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "fn_estado_plc",
+        "type": "function",
+        "z": "9b286a97e54b6f1b",
+        "name": "Generar estado desde PLC",
+        "func": "var plazas = msg.payload;\nvar estado = {};\n//logica del semaforo\nif (plazas <= 89) {\n    estado.color = \"green\";\n    estado.estado = \"VERDE\";\n} else if (plazas <= 99) {\n    estado.color = \"yellow\";\n    estado.estado = \"AMARILLO\";\n} else {\n    estado.color = \"red\";\n    estado.estado = \"ROJO\";\n}\n//dato de plazas ocupadas/libres\nestado.plazas_ocupadas = plazas;\nestado.plazas_libres = 100 - plazas;\nmsg.payload = estado;\n\n// Guardar último estado global\nflow.set(\"estado_parking\", estado);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "http_in_estado",
+        "type": "http in",
+        "z": "9b286a97e54b6f1b",
+        "name": "API /estado",
+        "url": "/estado",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 290,
+        "y": 140,
+        "wires": [
+            [
+                "fn_get_estado"
+            ]
+        ]
+    },
+    {
+        "id": "fn_get_estado",
+        "type": "function",
+        "z": "9b286a97e54b6f1b",
+        "name": "Enviar último estado",
+        "func": "msg.payload = flow.get(\"estado_parking\") || {error: \"Sin datos del PLC\"};\nreturn msg;\n//envio a web",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 140,
+        "wires": [
+            [
+                "http_response_estado"
+            ]
+        ]
+    },
+    {
+        "id": "http_response_estado",
+        "type": "http response",
+        "z": "9b286a97e54b6f1b",
+        "name": "",
+        "statusCode": "",
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json"
+        },
+        "x": 780,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "d14009ab599a288c",
+        "type": "s7 in",
+        "z": "9b286a97e54b6f1b",
+        "endpoint": "dd4b307c979cdf74",
+        "mode": "single",
+        "variable": "CV",
+        "diff": true,
+        "name": "",
+        "x": 270,
+        "y": 220,
+        "wires": [
+            [
+                "fn_estado_plc"
+            ]
+        ]
+    },
+    {
+        "id": "778b5e7f41051e7b",
+        "type": "mysql",
+        "z": "9b286a97e54b6f1b",
+        "mydb": "917c3d80eef25025",
+        "name": "DB",
+        "x": 570,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b80b5e1e0ab930c7",
+        "type": "s7 in",
+        "z": "9b286a97e54b6f1b",
+        "endpoint": "dd4b307c979cdf74",
+        "mode": "single",
+        "variable": "CV",
+        "diff": true,
+        "name": "",
+        "x": 170,
+        "y": 400,
+        "wires": [
+            [
+                "3ff6f66703ea44f4"
+            ]
+        ]
+    },
+    {
+        "id": "3ff6f66703ea44f4",
+        "type": "function",
+        "z": "9b286a97e54b6f1b",
+        "name": "function 2",
+        "func": "let plazas = msg.payload;  // número puro\n\nmsg.topic = `\nINSERT INTO garage (CAPACIDAD, fecha)\nVALUES (${plazas}, '${new Date().toISOString()}') \n`;\n//inyecta en los valores CAPACIDAD, fecha la variable plazas y la fecha actual\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 400,
+        "wires": [
+            [
+                "778b5e7f41051e7b",
+                "5b9b9085d4a3f554"
+            ]
+        ]
+    },
+    {
+        "id": "5b9b9085d4a3f554",
+        "type": "debug",
+        "z": "9b286a97e54b6f1b",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "dd4b307c979cdf74",
+        "type": "s7 endpoint",
+        "transport": "iso-on-tcp",
+        "address": "192.168.203.231",
+        "port": "102",
+        "rack": "0",
+        "slot": "1",
+        "localtsaphi": "01",
+        "localtsaplo": "00",
+        "remotetsaphi": "01",
+        "remotetsaplo": "00",
+        "connmode": "rack-slot",
+        "adapter": "",
+        "busaddr": 2,
+        "cycletime": 1000,
+        "timeout": 2000,
+        "name": "",
+        "vartable": [
+            {
+                "addr": "DB1,INT4",
+                "name": "CV"
+            }
+        ]
+    },
+    {
+        "id": "917c3d80eef25025",
+        "type": "MySQLdatabase",
+        "name": "DB",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "db": "pruebas_db",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "a13f4dac8d2a4ff9",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-s7": "3.1.1",
+            "node-red-node-mysql": "2.0.0"
+        }
+    }
+]
